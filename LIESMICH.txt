@@ -1,0 +1,23 @@
+Roma 315 – konstantinisches Rom unter dem heutigen Stadtplan
+============================================================
+
+Installation: den Ordner "roma315" komplett auf den Webserver kopieren
+(z. B. nach /var/www/html/roma315/) und https://deine-domain/roma315/ aufrufen.
+
+- Reine statische Dateien: index.html, data.js, data3d.js, view3d.js, features.js, route.js, fonts/, vendor/. Kein PHP, keine Datenbank.
+- route.js (1,4 MB) ist das Fußwegenetz für die Routenberechnung; es wird erst geladen, wenn jemand eine Route berechnet.
+- Eigene Markierungen speichert der Browser lokal (localStorage) – nichts geht an den Server.
+- 3D-Modus (Knopf "3D" rechts): braucht WebGL; three.js liegt lokal in vendor/.
+- Keine externen Abrufe: Schriften liegen lokal (DSGVO-unkritisch, kein Google Fonts).
+- Der Standort-Knopf (◎) funktioniert nur über https (Browser-Vorgabe).
+- Lokal testen: im Ordner "python3 -m http.server 8000" und http://localhost:8000 öffnen
+  (Standort geht auf localhost ebenfalls).
+
+Lizenzen
+- Kartendaten: © OpenStreetMap-Mitwirkende, Open Database License (ODbL),
+  https://www.openstreetmap.org/copyright – der Hinweis unten rechts auf der Karte muss sichtbar bleiben.
+  Die abgeleitete Datenbank (data.js) steht ebenfalls unter ODbL.
+- three.js r147: MIT-Lizenz (vendor/three-LICENSE.txt).
+- Schriften: EB Garamond, IBM Plex Sans / Sans Condensed – SIL Open Font License 1.1.
+- Rekonstruktionen (schraffiert): eigene Näherung nach gängigen Stadtplänen, Lage ±20–50 m.
+- 3D-Höhen: Schätzwerte der antiken Bauhöhen (z. B. Kolosseum 48 m, Pantheon 43 m); Gelände flach, Hügel nicht modelliert.

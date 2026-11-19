@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Roma 315 unter dem heutigen Stadtplan</title>
+<style>
+@font-face{font-family:"EB Garamond";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/eb-garamond-latin-500-normal.woff2) format("woff2");}
+@font-face{font-family:"EB Garamond";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/eb-garamond-latin-600-normal.woff2) format("woff2");}
+@font-face{font-family:"EB Garamond";font-weight:500;font-style:italic;font-display:swap;src:url(fonts/eb-garamond-latin-500-italic.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-condensed-latin-500-normal.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-condensed-latin-600-normal.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:700;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-condensed-latin-700-normal.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2");}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2");}
+:root{
+  /* Layout: Vollbild-Karte, schwebendes Kontrollpanel links oben, Infokarte unten rechts */
+  --ground:#e9e6dc;      /* Travertin */
+  --ink:#c62a1f;         /* heutige Straßen (rot) */
+  --ochre:#c98a3c;       /* erhaltene antike Bauten */
+  --oxblood:#8e2f22;     /* Mauern, Akzent */
+  --tiber:#9fb6b2;
+  --panel:#1f2326; --panel-ink:#ece9e1; --panel-dim:#a7a49b;
+  --f-display:"EB Garamond", Georgia, serif;
+  --f-body:"IBM Plex Sans", system-ui, sans-serif;
+  --f-map:"IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  color-scheme: light;
+}
+html,body{height:100%;margin:0;background:var(--ground);overflow:hidden;font-family:var(--f-body);}
+#map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block}
+#map.drag{cursor:grabbing}
+.panel{position:absolute;left:12px;top:12px;width:288px;max-width:calc(100% - 24px);background:var(--panel);color:var(--panel-ink);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.28);font-size:13px;line-height:1.4;max-height:calc(100% - 24px);display:flex;flex-direction:column}
+.panel header{padding:12px 14px 8px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.panel h1{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.1;margin:0;text-wrap:balance}
+.panel h1 small{display:block;font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--panel-dim);margin-top:3px}
+.panel .body{padding:0 14px 12px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.toggle-btn{background:none;border:1px solid #444a4f;color:var(--panel-ink);border-radius:6px;padding:3px 8px;font:inherit;font-size:12px;cursor:pointer;flex:none}
+.panel.collapsed .body{display:none}
+fieldset{border:0;margin:0;padding:0;display:grid;gap:5px}
+legend{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--panel-dim);margin-bottom:4px}
+label.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+label.chk input{accent-color:#d9a25a;width:15px;height:15px;margin:0}
+.search{display:flex;gap:6px}
+.search input{flex:1;min-width:0;background:#2b3034;border:1px solid #444a4f;color:var(--panel-ink);border-radius:6px;padding:6px 8px;font:inherit}
+.search button,.zoombtns button{background:#d9a25a;color:#1b1b1b;border:0;border-radius:6px;padding:6px 10px;font:inherit;font-weight:600;cursor:pointer}
+.msg{font-size:12px;color:#e7b98a;min-height:1em}
+.legend{display:grid;grid-template-columns:22px 1fr;gap:5px 8px;align-items:center;font-size:12px}
+.sw{width:22px;height:12px;border-radius:2px}
+.note{font-size:11.5px;color:var(--panel-dim)}
+.note a{color:#e0b47a}
+#info{position:absolute;right:12px;bottom:34px;width:320px;max-width:calc(100% - 24px);background:#fbfaf6;color:#1d1d1b;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:14px 16px;font-size:13.5px;line-height:1.45;display:none}
+#info h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0 0 2px;line-height:1.1;text-wrap:balance}
+#info .lat{font-family:var(--f-display);font-style:italic;font-size:16px;color:var(--oxblood);margin-bottom:8px}
+#info .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+#info .pill{font-size:11px;border-radius:999px;padding:2px 8px;background:#efe6d6;color:#5b3d17}
+#info .pill.rec{background:#f3dcd6;color:#7a2418}
+#info p{margin:6px 0 0}
+#info .x{position:absolute;right:10px;top:8px;background:none;border:0;font-size:20px;cursor:pointer;color:#555}
+.zoombtns{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.zoombtns button{width:36px;height:36px;padding:0;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+#scale{position:absolute;left:12px;bottom:10px;font-size:11px;color:#333;font-family:var(--f-map)}
+#scale div{height:5px;border:2px solid #222;border-top:0;margin-bottom:2px}
+#attr{position:absolute;right:8px;bottom:6px;font-size:10.5px;color:#444;background:rgba(233,230,220,.85);padding:1px 6px;border-radius:4px}
+#attr a{color:#444}
+.zoombtns .modebtn{width:36px;height:36px;font-size:13px;font-weight:700;background:#1f2326;color:#ece9e1;border:2px solid #d9a25a}
+.zoombtns .modebtn[aria-pressed="true"]{background:#d9a25a;color:#1b1b1b}
+#map3d{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+[hidden]{display:none!important}
+#map,#map3d{z-index:1}#labels3d{z-index:2}.panel,.zoombtns,#info,#attr,#scale,#hint3d,#load3d{z-index:5}
+#labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#labels3d span{position:absolute;white-space:nowrap;transform:translate(-50%,-50%);will-change:transform}
+#labels3d .st{font:600 12px var(--f-map);color:#8a1a12;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+#labels3d .mo{font:italic 500 15px var(--f-display);color:#5e1a10;text-shadow:0 0 3px #faf6ec,0 0 3px #faf6ec,0 0 2px #faf6ec}
+#labels3d .mk{font:700 13px var(--f-body);color:#fff;background:#7b2fbf;padding:1px 6px;border-radius:4px}
+#labels3d .hi{font:600 14px var(--f-display);letter-spacing:.25em;color:rgba(90,59,28,.7);text-transform:uppercase}
+#hint3d{position:absolute;left:50%;transform:translateX(-50%);bottom:30px;background:rgba(31,35,38,.85);color:#ece9e1;font-size:12px;padding:5px 10px;border-radius:6px;max-width:calc(100% - 24px);text-align:center}
+#load3d{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#1f2326;color:#ece9e1;padding:10px 16px;border-radius:8px;font-size:14px}
+details.sec{border-top:1px solid #343a3f;padding-top:8px}
+details.sec>summary{cursor:pointer;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--panel-dim);list-style:none;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+details.sec>summary::before{content:"▸";font-size:10px;transition:transform .15s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary::-webkit-details-marker{display:none}
+.rt,.mk{display:flex;flex-direction:column;gap:6px}
+.rrow{display:flex;gap:6px;align-items:center}
+.rrow input{flex:1;min-width:0;background:#2b3034;border:1px solid #444a4f;color:var(--panel-ink);border-radius:6px;padding:6px 8px;font:inherit}
+.rlab{width:20px;height:20px;border-radius:50%;background:#2e8540;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;flex:none}
+.rlab.b{background:#c62a1f}
+.pickbtn{background:#2b3034;color:var(--panel-ink);border:1px solid #444a4f;border-radius:6px;width:32px;height:30px;cursor:pointer;font-size:16px;flex:none}
+.pickbtn[aria-pressed="true"],.mk #mAdd[aria-pressed="true"]{background:#d9a25a;color:#1b1b1b}
+.rbtns,.mio{display:flex;gap:6px;flex-wrap:wrap}
+.rbtns button,.mio button,.mk #mAdd,.mlist button{background:#2b3034;color:var(--panel-ink);border:1px solid #444a4f;border-radius:6px;padding:5px 9px;font:inherit;font-size:12.5px;cursor:pointer}
+.rbtns .primary,.mk .primary{background:#d9a25a;color:#1b1b1b;border-color:#d9a25a;font-weight:600}
+.rsum{font-size:13px;color:#f1d3a6;font-weight:600}
+.rsteps{margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:3px;max-height:260px;overflow:auto;font-size:12.5px}
+.rsteps li{cursor:pointer;line-height:1.35}
+.rsteps li:hover{color:#f1d3a6}
+.rsteps .dist{color:var(--panel-dim);font-variant-numeric:tabular-nums}
+.rsteps .anc{display:block;color:#d7b98e;font-style:italic;font-size:11.5px}
+.mlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.mlist li{display:flex;gap:6px;align-items:center;font-size:12.5px}
+.mlist li .mn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.mlist li .dot{width:10px;height:10px;border-radius:50%;background:#7b2fbf;flex:none}
+.mlist button{padding:2px 7px;font-size:12px}
+#mText{background:#2b3034;color:var(--panel-ink);border:1px solid #444a4f;border-radius:6px;font:12px ui-monospace,monospace;padding:6px}
+#info .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+#info .acts button{background:#efe6d6;border:1px solid #d9c7a7;color:#3d2a12;border-radius:6px;padding:5px 9px;font:inherit;font-size:12.5px;cursor:pointer}
+#modeHint{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#1b5fd1;color:#fff;padding:7px 12px;border-radius:8px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:6;display:flex;gap:10px;align-items:center;max-width:calc(100% - 120px)}
+#modeHint button{background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:5px;padding:3px 8px;cursor:pointer;font:inherit}
+#markDlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fbfaf6;color:#1d1d1b;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:14px 16px;z-index:7;width:300px;max-width:calc(100% - 24px);display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+#markDlg h3{margin:0;font-family:var(--f-display);font-size:20px}
+#markDlg input,#markDlg textarea{border:1px solid #cbbfa8;border-radius:6px;padding:6px 8px;font:inherit}
+#markDlg .row{display:flex;gap:8px;justify-content:flex-end}
+#markDlg button{border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;border:1px solid #cbbfa8;background:#efe6d6}
+#markDlg button.primary{background:#7b2fbf;color:#fff;border-color:#7b2fbf}
+.zoombtns .compass{background:#fbfaf6;width:36px;height:36px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer}
+.zoombtns .compass svg{transition:transform .1s linear}
+#navBar{position:absolute;left:12px;right:60px;top:12px;z-index:8;background:#0f5132;color:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:flex;gap:12px;align-items:center;padding:10px 14px;max-width:560px}
+#navBar .arr{width:52px;height:52px;flex:none;display:grid;place-items:center;background:rgba(255,255,255,.12);border-radius:10px}
+#navBar .nd{font:700 26px var(--f-body);font-variant-numeric:tabular-nums;line-height:1}
+#navBar .nt{font-size:15px;line-height:1.25;margin-top:3px;text-wrap:balance}
+#navBar .na{font-size:12.5px;color:#cfe8d9;margin-top:4px;font-style:italic}
+#navFoot{position:absolute;left:12px;right:12px;bottom:28px;z-index:8;background:#fbfaf6;color:#1d1d1b;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;padding:8px 10px;max-width:560px;flex-wrap:wrap}
+#navFoot .ns{flex:1;min-width:140px;font-size:14px}
+#navFoot .ns b{font-size:17px;font-variant-numeric:tabular-nums}
+#navFoot button{border:1px solid #d9c7a7;background:#efe6d6;color:#3d2a12;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;cursor:pointer}
+#navFoot button.end{background:#c62a1f;color:#fff;border-color:#c62a1f;font-weight:600}
+#navFoot .gps{font-size:11.5px;color:#6b6252;width:100%}
+.rbtns .navbtn{background:#0f5132;color:#fff;border-color:#0f5132;font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid #d9a25a;outline-offset:2px}
+@media (max-width:520px){.panel{width:auto;right:60px}.panel:not(.open-mobile) .body{display:none}#info{bottom:30px}}
+</style>
+</head>
+<body>
+<canvas id="map" aria-label="Karte: das konstantinische Rom mit dem heutigen Straßennetz"></canvas>
+
+<section class="panel" id="panel">
+  <header>
+    <h1>Roma 315 n. Chr.<small>Konstantinisches Rom unter dem heutigen Straßennetz</small></h1>
+    <button class="toggle-btn" id="collapse" aria-expanded="true">Einklappen</button>
+  </header>
+  <div class="body">
+    <form class="search" id="searchForm" autocomplete="off">
+      <input id="q" list="names" placeholder="Straße oder Monument suchen" aria-label="Straße oder Monument suchen">
+      <datalist id="names"></datalist>
+      <button type="submit">Los</button>
+    </form>
+    <div class="msg" id="msg" role="status"></div>
+    <details class="sec" id="routeBox" open><summary>Route zu Fuß</summary>
+      <div class="rt">
+        <div class="rrow"><span class="rlab">A</span><input id="rFrom" list="rnames" placeholder="Start: Ort, Straße, „Mein Standort“" aria-label="Startpunkt"><button type="button" class="pickbtn" id="rFromPick" title="Start auf der Karte antippen" aria-label="Start auf der Karte antippen">⌖</button></div>
+        <div class="rrow"><span class="rlab b">B</span><input id="rTo" list="rnames" placeholder="Ziel: Ort, Straße, Markierung" aria-label="Ziel"><button type="button" class="pickbtn" id="rToPick" title="Ziel auf der Karte antippen" aria-label="Ziel auf der Karte antippen">⌖</button></div>
+        <datalist id="rnames"></datalist>
+        <div class="rbtns"><button type="button" id="rGo" class="primary">Route berechnen</button><button type="button" id="rNav" class="navbtn" hidden>▶ Navigation starten</button><button type="button" id="rSwap" title="Start und Ziel tauschen">⇅</button><button type="button" id="rClear">Löschen</button><button type="button" id="rSim" hidden title="Route ohne GPS probeweise ablaufen">Probelauf</button></div>
+        <div class="rsum" id="rSum" role="status"></div>
+        <ol class="rsteps" id="rSteps"></ol>
+      </div>
+    </details>
+    <details class="sec" id="markBox"><summary>Meine Markierungen <span id="mCount"></span></summary>
+      <div class="mk">
+        <button type="button" id="mAdd" class="primary">+ Markierung auf Karte setzen</button>
+        <ul class="mlist" id="mList"></ul>
+        <div class="mio"><button type="button" id="mExport">Liste kopieren</button><button type="button" id="mImport">Liste einfügen</button></div>
+        <textarea id="mText" hidden aria-label="Markierungen als Text" rows="3"></textarea>
+        <p class="note">Markierungen werden nur in diesem Browser auf diesem Gerät gespeichert. Mit „Liste kopieren“ und „Liste einfügen“ übertragt ihr sie auf ein anderes Gerät.</p>
+      </div>
+    </details>
+    <details class="sec" open><summary>Ebenen</summary><fieldset>
+      <label class="chk"><input type="checkbox" id="l_anc" checked> Antike Bauten (erhalten, OSM)</label>
+      <label class="chk"><input type="checkbox" id="l_rec" checked> Rekonstruktionen (verschwunden)</label>
+      <label class="chk"><input type="checkbox" id="l_roads" checked> Antike Straßenzüge</label>
+      <label class="chk"><input type="checkbox" id="l_str" checked> Heutige Straßen</label>
+      <label class="chk"><input type="checkbox" id="l_strlab" checked> Heutige Straßennamen</label>
+      <label class="chk"><input type="checkbox" id="l_latin"> Antike Namen lateinisch</label>
+    </fieldset></details>
+    <details class="sec" id="legBox"><summary>Legende</summary><fieldset>
+      <div class="legend">
+        <span class="sw" style="background:#c62a1f;height:4px"></span><span>heutige Straße</span>
+        <span class="sw" style="background:#c98a3c"></span><span>erhaltener antiker Bau</span>
+        <span class="sw" style="background:#ecd3a6"></span><span>archäologische Zone</span>
+        <span class="sw" style="background:repeating-linear-gradient(45deg,#d68b5f 0 3px,#f2d9c4 3px 6px);outline:1.5px dashed #8e2f22"></span><span>rekonstruiert, Lage ungefähr</span>
+        <span class="sw" style="background:#8e2f22;height:5px"></span><span>Aurelianische / Servianische Mauer</span>
+        <span class="sw" style="background:repeating-linear-gradient(90deg,#7a5230 0 5px,transparent 5px 8px);height:4px"></span><span>Aquädukt</span>
+        <span class="sw" style="background:#121212;height:8px"></span><span>antike Straße (unter der heutigen)</span>
+        <span class="sw" style="background:#9fb6b2"></span><span>Tiber (heutiger Lauf)</span>
+        <span class="sw" style="background:#1b5fd1;height:5px"></span><span>berechnete Route</span>
+        <span class="sw" style="background:#7b2fbf;height:12px;width:12px;border-radius:50% 50% 50% 0;transform:rotate(-45deg)"></span><span>eigene Markierung</span>
+      </div>
+    </fieldset></details>
+    <p class="note">Antippen oder anklicken zeigt Name, Datierung und Genauigkeit. Erhaltene Grundrisse stammen aus OpenStreetMap und sitzen meist auf den Meter genau. Verschwundene Bauten sind nach den gängigen Stadtplänen eingezeichnet und können 20–50 m abweichen.</p>
+  </div>
+</section>
+
+<div class="zoombtns">
+  <button id="zin" aria-label="Hineinzoomen">+</button>
+  <button id="zout" aria-label="Herauszoomen">−</button>
+  <button id="zhome" aria-label="Zur Gesamtansicht" title="Gesamtansicht">⌂</button>
+  <button id="zgps" aria-label="Meinen Standort zeigen" title="Mein Standort">◎</button>
+  <button id="zcomp" class="compass" title="Kompass – Klick richtet die Karte nach Norden aus" aria-label="Kompass, nach Norden ausrichten"><svg width="30" height="30" viewBox="-15 -15 30 30" id="compSvg" aria-hidden="true"><circle r="13.5" fill="none" stroke="#c9bfae" stroke-width="1"/><path d="M0,-12 L4,0 L0,-2 L-4,0Z" fill="#c62a1f"/><path d="M0,12 L4,0 L0,2 L-4,0Z" fill="#3a3a3a"/><text y="-5.5" x="0" text-anchor="middle" font-size="5" font-weight="700" fill="#fff" font-family="sans-serif">N</text></svg></button>
+  <button id="z3d" class="modebtn" aria-pressed="false" title="Zwischen 2D-Karte und 3D-Modell wechseln">3D</button>
+</div>
+
+<div id="modeHint" hidden><span id="modeHintT"></span><button type="button" id="modeHintX">Abbrechen</button></div>
+<form id="markDlg" hidden><h3>Markierung</h3><label>Name<br><input id="mdName" required maxlength="80" placeholder="z. B. Kloster"></label><label>Notiz (optional)<br><textarea id="mdNote" rows="2" maxlength="300"></textarea></label><div class="row"><button type="button" id="mdCancel">Abbrechen</button><button type="submit" class="primary">Speichern</button></div></form>
+<div id="navBar" hidden role="status" aria-live="polite"><div class="arr"><svg id="navArr" width="40" height="40" viewBox="-20 -20 40 40" aria-hidden="true"></svg></div><div><div class="nd" id="navDist"></div><div class="nt" id="navText"></div><div class="na" id="navAnc"></div></div></div>
+<div id="navFoot" hidden><div class="ns"><b id="navRem"></b> · <span id="navEta"></span><div class="gps" id="navGps"></div></div><button type="button" id="navMute" aria-pressed="false">🔊 Ton an</button><button type="button" id="navView">3D folgen</button><button type="button" id="navEnd" class="end">Beenden</button></div>
+<article id="info" aria-live="polite">
+  <button class="x" id="infoX" aria-label="Info schließen">×</button>
+  <h2 id="iT"></h2><div class="lat" id="iL"></div>
+  <div class="row" id="iP"></div>
+  <p id="iN"></p>
+</article>
+
+<canvas id="map3d" aria-label="3D-Modell des konstantinischen Rom" hidden></canvas>
+<div id="labels3d" aria-hidden="true"></div>
+<div id="hint3d" hidden>Ziehen: verschieben · Rechte Maustaste oder Strg+Ziehen: drehen und neigen · Zwei Finger: drehen, neigen, zoomen</div>
+<div id="load3d" hidden>3D-Modell wird gebaut …</div>
+<div id="scale"><div id="scalebar"></div><span id="scaletxt"></span></div>
+<div id="attr">Kartendaten © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a> (ODbL) · Rekonstruktionen: eigene Näherung</div>
+
+<script>window.R2DHOOKS={draw:[],click:null,info:null};</script>
+<script src="data.js"></script>
+<script src="data3d.js"></script>
+<script>
+(()=>{
+const D=window.ROMA;
+const LAT0=41.86, LON0=12.44;
+const KX=Math.cos(41.89*Math.PI/180)*111320/1e5, KY=110950/1e5;
+const dec=s=>{const v=s.split(',').map(Number);const o=[];let a=0,b=0;for(let i=0;i<v.length;i+=2){a+=v[i];b+=v[i+1];o.push([b*KX,a*KY]);}return o;};
+const toLL=(x,y)=>[LAT0+y/KY/1e5,LON0+x/KX/1e5];
+
+// ---------- build geometry ----------
+const STY={
+ site:{fill:'#ecd3a6',stroke:null},
+ ruin:{fill:'#c98a3c',stroke:'#9a6326'},
+ temple:{fill:'#c98a3c',stroke:'#9a6326'},
+ forum:{fill:'#d39a4f',stroke:'#9a6326'},
+ baths:{fill:'#c98a3c',stroke:'#9a6326'},
+ theater:{fill:'#c98a3c',stroke:'#9a6326'},
+ tomb:{fill:'#c98a3c',stroke:'#9a6326'},
+ gate:{fill:'#8e2f22',stroke:'#8e2f22'},
+};
+const pathOf=(rings,close)=>{const p=new Path2D();for(const r of rings){r.forEach((q,i)=>i?p.lineTo(q[0],q[1]):p.moveTo(q[0],q[1]));if(close)p.closePath();}return p;};
+const bboxOf=rings=>{let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const r of rings)for(const q of r){a=Math.min(a,q[0]);b=Math.min(b,q[1]);c=Math.max(c,q[0]);d=Math.max(d,q[1]);}return [a,b,c,d];};
+const areaOf=r=>{let s=0;for(let i=0;i<r.length-1;i++)s+=r[i][0]*r[i+1][1]-r[i+1][0]*r[i][1];return Math.abs(s)/2;};
+const centroid=r=>{let A=0,cx=0,cy=0;for(let i=0;i<r.length-1;i++){const f=r[i][0]*r[i+1][1]-r[i+1][0]*r[i][1];A+=f;cx+=(r[i][0]+r[i+1][0])*f;cy+=(r[i][1]+r[i+1][1])*f;}if(Math.abs(A)<1e-6){const b=bboxOf([r]);return[(b[0]+b[2])/2,(b[1]+b[3])/2];}return[cx/(3*A),cy/(3*A)];};
+
+const water=[],anc=[],walls=[],aque=[],ancByIdx=[];
+for(const [fi,f] of D.A.entries()){
+  const outer=f.o.map(dec), inner=(f.i||[]).map(dec);
+  const o={...f,rings:outer.concat(inner),bbox:bboxOf(outer)};
+  if(f.c==='water'){water.push(pathOf(o.rings,true));continue;}
+  if(f.c==='wall'&&!f.p){walls.push(pathOf(outer,false));o.line=true;}
+  else if(f.c==='aqueduct'&&!f.p){aque.push(pathOf(outer,false));o.line=true;}
+  o.path=pathOf(o.rings,!o.line);
+  o.area=f.p?areaOf(outer[0]):0;
+  o.cen=centroid(outer[0]);o.idx=fi;ancByIdx[fi]=o;
+  anc.push(o);
+}
+const wallPath=new Path2D();walls.forEach(p=>wallPath.addPath(p));
+const aquePath=new Path2D();aque.forEach(p=>aquePath.addPath(p));
+const waterPath=new Path2D();water.forEach(p=>waterPath.addPath(p));
+
+const rec=D.R.map(f=>{const r=f.o.map(dec);return {...f,rings:r,bbox:bboxOf(r),path:pathOf(r,!!f.p),area:f.p?areaOf(r[0]):0,cen:f.p?centroid(r[0]):r[0][Math.floor(r[0].length/2)]};});
+
+const roadPath=new Path2D();const roads=D.RD.map(r=>{const g=dec(r.o);const p=pathOf([g],false);roadPath.addPath(p);return {...r,g,path:p,bbox:bboxOf([g])};});
+
+// streets
+const W_CLS={1:3.4,2:2.8,3:2.0,4:1.5,5:0.9};
+const strPaths={1:new Path2D(),2:new Path2D(),3:new Path2D(),4:new Path2D(),5:new Path2D()};
+const tunPath=new Path2D(), sqFill=new Path2D();
+const streets=[];
+for(const s of D.S){const g=dec(s[4]);if(g.length<2)continue;const p=pathOf([g],!!s[2]);
+  if(s[2]){sqFill.addPath(p);strPaths[4].addPath(p);}
+  else if(s[3]) tunPath.addPath(p); else strPaths[s[0]].addPath(p);
+  if(s[1]&&!s[3]) streets.push({cls:s[0],name:s[1],g,area:!!s[2],bbox:bboxOf([g])});
+}
+
+// search index
+const index=new Map();
+const addIdx=(name,bbox)=>{if(!name)return;const k=name;const b=index.get(k);if(b){b[0]=Math.min(b[0],bbox[0]);b[1]=Math.min(b[1],bbox[1]);b[2]=Math.max(b[2],bbox[2]);b[3]=Math.max(b[3],bbox[3]);}else index.set(k,bbox.slice());};
+streets.forEach(s=>addIdx(s.name,s.bbox));
+anc.forEach(a=>{if(a.n&&!a.line){addIdx(a.n,a.bbox);if(a.it&&a.it!==a.n)addIdx(a.it,a.bbox);}});
+rec.forEach(a=>{addIdx(a.n,a.bbox);addIdx(a.la,a.bbox);});
+const dl=document.getElementById('names');
+[...index.keys()].sort((a,b)=>a.localeCompare(b,'it')).forEach(n=>{const o=document.createElement('option');o.value=n;dl.appendChild(o);});
+
+// hatch pattern
+const cv=document.getElementById('map');const ctx=cv.getContext('2d');
+const hp=document.createElement('canvas');hp.width=hp.height=8;{const h=hp.getContext('2d');h.fillStyle='rgba(242,217,196,.75)';h.fillRect(0,0,8,8);h.strokeStyle='rgba(196,110,70,.85)';h.lineWidth=2.2;h.beginPath();h.moveTo(-2,10);h.lineTo(10,-2);h.moveTo(-2,2);h.lineTo(2,-2);h.moveTo(6,10);h.lineTo(10,6);h.stroke();}
+const hatch=ctx.createPattern(hp,'repeat');
+
+// ---------- view ----------
+let dpr=1,Wc=0,Hc=0;
+const view={x:0,y:0,k:1};
+const ll2m=(lat,lon)=>[(lon-LON0)*1e5*KX,(lat-LAT0)*1e5*KY];
+function home(){const a=ll2m(41.8835,12.4655),b=ll2m(41.9045,12.5060);fitBox([a[0],a[1],b[0],b[1]]);}
+function fitBox(b,pad=40,maxK=8){const w=b[2]-b[0],h=b[3]-b[1];view.x=(b[0]+b[2])/2;view.y=(b[1]+b[3])/2;view.k=Math.min(maxK,Math.min((Wc-2*pad)/Math.max(w,30),(Hc-2*pad)/Math.max(h,30)));clampK();}
+function clampK(){view.k=Math.max(0.12,Math.min(view.k,14));}
+function resize(){dpr=window.devicePixelRatio||1;Wc=cv.clientWidth;Hc=cv.clientHeight;cv.width=Math.round(Wc*dpr);cv.height=Math.round(Hc*dpr);}
+const w2s=(x,y)=>[(x-view.x)*view.k+Wc/2,-(y-view.y)*view.k+Hc/2];
+const s2w=(sx,sy)=>[(sx-Wc/2)/view.k+view.x,-(sy-Hc/2)/view.k+view.y];
+function worldT(){ctx.setTransform(dpr*view.k,0,0,-dpr*view.k,dpr*(Wc/2-view.x*view.k),dpr*(Hc/2+view.y*view.k));}
+function screenT(){ctx.setTransform(dpr,0,0,dpr,0,0);}
+
+const L={anc:true,rec:true,roads:true,str:true,strlab:true,latin:false};
+let selected=null;
+
+// line width in px that grows gently with zoom
+const zf=()=>Math.max(0.55,Math.min(1.9,Math.pow(view.k/1.2,0.45)));
+
+function draw(){
+  screenT();ctx.fillStyle='#e9e6dc';ctx.fillRect(0,0,Wc,Hc);
+  worldT();const k=view.k;
+  // Tiber
+  ctx.fillStyle='#9fb6b2';ctx.fill(waterPath,'evenodd');
+  // ancient roads underlay
+  if(L.roads){ctx.strokeStyle='rgba(18,18,18,.88)';ctx.lineWidth=Math.max(7,12*zf())/k;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(roadPath);}
+  // ancient remains
+  if(L.anc){
+    for(const a of anc){ if(a.line)continue; const s=STY[a.c]||STY.ruin; ctx.fillStyle=s.fill; ctx.fill(a.path,'evenodd');
+      if(s.stroke&&k>1.2){ctx.strokeStyle=s.stroke;ctx.lineWidth=0.7/k;ctx.stroke(a.path);} }
+    ctx.lineCap='butt';
+    ctx.strokeStyle='#7a5230';ctx.lineWidth=Math.max(2.2,4*zf())/k;ctx.setLineDash([6/k,3/k]);ctx.stroke(aquePath);ctx.setLineDash([]);
+    ctx.strokeStyle='#8e2f22';ctx.lineWidth=Math.max(3,6*zf())/k;ctx.lineJoin='round';ctx.stroke(wallPath);
+  }
+  if(L.rec){
+    for(const r of rec){ if(!r.p){ctx.strokeStyle='#8e2f22';ctx.lineWidth=Math.max(3,6*zf())/k;ctx.setLineDash([10/k,7/k]);ctx.stroke(r.path);ctx.setLineDash([]);continue;}
+      ctx.save();ctx.fillStyle=hatch;
+      // pattern in screen space
+      ctx.setTransform(dpr,0,0,dpr,0,0);const t=new DOMMatrix([view.k,0,0,-view.k,Wc/2-view.x*view.k,Hc/2+view.y*view.k]);const pp=new Path2D();pp.addPath(r.path,t);ctx.fill(pp);
+      ctx.strokeStyle='#8e2f22';ctx.lineWidth=1.4;ctx.setLineDash([5,3]);ctx.stroke(pp);ctx.setLineDash([]);ctx.restore(); }
+    worldT();
+  }
+  // selection highlight
+  if(selected){ctx.strokeStyle='#1b5fd1';ctx.lineWidth=3/k;ctx.setLineDash([]);ctx.stroke(selected.path);}
+  // modern streets: white casing then black
+  if(L.str){
+    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill(sqFill);
+    const z=zf();
+    ctx.strokeStyle='rgba(198,42,31,.55)';ctx.lineWidth=W_CLS[3]*z*0.8/k;ctx.setLineDash([4/k,3/k]);ctx.stroke(tunPath);ctx.setLineDash([]);
+    for(const c of [5,4,3,2,1]){ if(c===5&&k<0.9)continue; ctx.strokeStyle='#c62a1f';ctx.lineWidth=W_CLS[c]*z/k;
+      if(c===5){ctx.setLineDash([3/k,2.5/k]);} ctx.stroke(strPaths[c]); ctx.setLineDash([]); }
+  }
+  screenT();
+  drawAncientLabels();
+  if(L.str&&L.strlab) drawStreetLabels();
+  drawGps();
+  for(const f of window.R2DHOOKS.draw)f(ctx);
+  drawScale();
+}
+
+// ---------- labels ----------
+let grid;
+function gInit(){grid=new Map();}
+function gFree(b){const c=40;for(let x=Math.floor(b[0]/c);x<=Math.floor(b[2]/c);x++)for(let y=Math.floor(b[1]/c);y<=Math.floor(b[3]/c);y++){const l=grid.get(x+','+y);if(l)for(const q of l)if(!(b[2]<q[0]||b[0]>q[2]||b[3]<q[1]||b[1]>q[3]))return false;}return true;}
+function gAdd(b){const c=40;for(let x=Math.floor(b[0]/c);x<=Math.floor(b[2]/c);x++)for(let y=Math.floor(b[1]/c);y<=Math.floor(b[3]/c);y++){const k=x+','+y;(grid.get(k)||grid.set(k,[]).get(k)).push(b);}}
+function halo(text,x,y,font,fill,haloC,hw){ctx.font=font;ctx.lineJoin='round';ctx.lineWidth=hw;ctx.strokeStyle=haloC;ctx.strokeText(text,x,y);ctx.fillStyle=fill;ctx.fillText(text,x,y);}
+
+function drawAncientLabels(){
+  gInit();ctx.textAlign='center';ctx.textBaseline='middle';
+  const k=view.k;
+  // hills (large, spaced)
+  for(const h of D.L){const [x,y]=w2s(h.u[1]*KX,h.u[0]*KY);if(x<-200||x>Wc+200||y<-50||y>Hc+50)continue;
+    const big=h.k==='hill';const fs=big?Math.max(15,Math.min(30,15*Math.pow(k,0.35))):Math.max(13,Math.min(22,13*Math.pow(k,0.3)));
+    const t=(L.latin?h.la:h.n).toUpperCase().split('').join(' ');
+    ctx.font=`600 ${fs}px "EB Garamond", Georgia, serif`;const w=ctx.measureText(t).width;const b=[x-w/2,y-fs/2,x+w/2,y+fs/2];
+    ctx.globalAlpha=big?0.55:0.45;halo(t,x,y,ctx.font,'#5a3b1c','rgba(233,230,220,.6)',3);ctx.globalAlpha=1;gAdd(b);}
+  const items=[];
+  if(L.rec)rec.forEach(r=>{if(r.p)items.push(r);});
+  if(L.anc)anc.forEach(a=>{if(a.n&&!a.line&&a.c!=='gate'&&a.area>150)items.push(a);});
+  items.sort((a,b)=>b.area-a.area);
+  for(const a of items){const pxA=a.area*k*k;if(pxA<900)continue;const [x,y]=w2s(a.cen[0],a.cen[1]);if(x<-100||x>Wc+100||y<-30||y>Hc+30)continue;
+    const name=L.latin?(a.la||a.n):(a.n||a.la);if(!name)continue;
+    const fs=Math.max(12,Math.min(19,9+Math.sqrt(pxA)/30));
+    const font=`italic 500 ${fs}px "EB Garamond", Georgia, serif`;ctx.font=font;
+    const lines=wrap(name,Math.max(90,Math.min(200,Math.sqrt(pxA)*1.1)));
+    const w=Math.max(...lines.map(l=>ctx.measureText(l).width));const h=lines.length*fs*1.05;
+    const b=[x-w/2-2,y-h/2-2,x+w/2+2,y+h/2+2];if(!gFree(b))continue;gAdd(b);
+    lines.forEach((l,i)=>halo(l,x,y-h/2+fs*0.55+i*fs*1.05,font,'#5e1a10','rgba(250,246,236,.9)',3.2));
+  }
+}
+function wrap(t,max){const ws=t.split(' ');const out=[];let cur='';for(const w of ws){const n=cur?cur+' '+w:w;if(ctx.measureText(n).width>max&&cur){out.push(cur);cur=w;}else cur=n;}if(cur)out.push(cur);return out;}
+
+function drawStreetLabels(){
+  const k=view.k; if(k<0.35)return;
+  const fs=Math.max(10.5,Math.min(14,10+2.5*Math.log2(Math.max(k,1))));
+  const font=`600 ${fs}px "IBM Plex Sans Condensed", "Arial Narrow", sans-serif`;ctx.font=font;ctx.textAlign='left';ctx.textBaseline='middle';
+  const placedByName=new Map();
+  const vis=[];const [x0,y1]=s2w(0,0),[x1,y0]=s2w(Wc,Hc);
+  for(const s of streets){const b=s.bbox;if(b[2]<x0||b[0]>x1||b[3]<y0||b[1]>y1)continue;
+    if(k<0.8&&s.cls>2)continue;if(k<1.6&&s.cls>3)continue;if(k<2.5&&s.cls===5)continue;vis.push(s);}
+  vis.sort((a,b)=>a.cls-b.cls||(b.bbox[2]-b.bbox[0]+b.bbox[3]-b.bbox[1])-(a.bbox[2]-a.bbox[0]+a.bbox[3]-a.bbox[1]));
+  const minSame=320;
+  for(const s of vis){
+    const pts=s.g.map(q=>w2s(q[0],q[1]));
+    const tw=ctx.measureText(s.name).width; if(tw<2)continue;
+    if(s.area){continue;}
+    // cumulative length
+    const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+    const total=cum[cum.length-1];if(total<tw+16)continue;
+    // try start offsets around middle
+    const tries=[0.5,0.3,0.7,0.15,0.85];let done=false;
+    for(const t of tries){if(done)break;let start=total*t-tw/2;if(start<4||start+tw>total-4)continue;
+      const glyphs=place(pts,cum,start,s.name);if(!glyphs)continue;
+      const mid=glyphs[Math.floor(glyphs.length/2)];
+      const prev=placedByName.get(s.name);if(prev&&prev.some(p=>Math.hypot(p[0]-mid.x,p[1]-mid.y)<minSame))continue;
+      let bb=[1e9,1e9,-1e9,-1e9];for(const g of glyphs){bb=[Math.min(bb[0],g.x-fs*.6),Math.min(bb[1],g.y-fs*.6),Math.max(bb[2],g.x+fs*.6),Math.max(bb[3],g.y+fs*.6)];}
+      if(bb[2]<0||bb[0]>Wc||bb[3]<0||bb[1]>Hc)continue;
+      // finer collision: per glyph boxes
+      const boxes=glyphs.map(g=>[g.x-fs*.45,g.y-fs*.45,g.x+fs*.45,g.y+fs*.45]);
+      if(!boxes.every(gFree))continue; boxes.forEach(gAdd);
+      (placedByName.get(s.name)||placedByName.set(s.name,[]).get(s.name)).push([mid.x,mid.y]);
+      for(const pass of [0,1])for(const g of glyphs){if(g.c===' '&&pass===1)continue;ctx.save();ctx.translate(g.x,g.y);ctx.rotate(g.a);
+        if(pass===0){ctx.lineWidth=3.6;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineJoin='round';if(g.c===' '){ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(-g.w/2-1,-ctx.lineWidth*1.1,g.w+2,ctx.lineWidth*2.2);}else ctx.strokeText(g.c,-g.w/2,0);}else{ctx.fillStyle='#8a1a12';ctx.fillText(g.c,-g.w/2,0);}ctx.restore();}
+      done=true;
+    }
+  }
+}
+function place(pts,cum,start,text){
+  // decide direction so text is upright
+  const pAt=d=>{let i=1;while(i<cum.length-1&&cum[i]<d)i++;const t=(d-cum[i-1])/((cum[i]-cum[i-1])||1);return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t,Math.atan2(pts[i][1]-pts[i-1][1],pts[i][0]-pts[i-1][0])];};
+  const total=ctx.measureText(text).width;
+  const a0=pAt(start),a1=pAt(start+total);let rev=a1[0]<a0[0];
+  const chars=[...text];const out=[];let d=rev?start+total:start;let lastA=null;
+  for(const c of chars){const w=ctx.measureText(c).width;const dm=rev?d-w/2:d+w/2;const p=pAt(dm);let a=p[2];if(rev)a+=Math.PI;
+    if(lastA!==null){let da=Math.abs(((a-lastA+3*Math.PI)%(2*Math.PI))-Math.PI);if(da>0.6)return null;}lastA=a;
+    out.push({c,x:p[0],y:p[1],a,w});d=rev?d-w:d+w;}
+  return out;
+}
+
+
+// ---------- GPS (works only over https) ----------
+let me=null,follow=false,watchId=null;
+function drawGps(){if(!me)return;const [x,y]=w2s(me.x,me.y);const r=Math.max(me.acc*view.k,0);
+  ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fillStyle='rgba(27,95,209,.12)';ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fillStyle='#1b5fd1';ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();}
+document.getElementById('zgps').onclick=()=>{const msg=document.getElementById('msg');
+  if(!navigator.geolocation){msg.textContent='Dieser Browser kann den Standort nicht bestimmen.';return;}
+  follow=true;if(watchId!==null){if(me){if(is3d())R3D.flyTo([me.x-150,me.y-150,me.x+150,me.y+150]);else{view.x=me.x;view.y=me.y;if(view.k<3)view.k=3;req();}}return;}
+  msg.textContent='Standort wird gesucht …';
+  watchId=navigator.geolocation.watchPosition(p=>{const [x,y]=ll2m(p.coords.latitude,p.coords.longitude);me={x,y,acc:p.coords.accuracy||20};
+    const inside=p.coords.latitude>41.866&&p.coords.latitude<41.913&&p.coords.longitude>12.45&&p.coords.longitude<12.52;
+    msg.textContent=inside?'Standort ± '+Math.round(me.acc)+' m':'Du bist außerhalb des Kartenausschnitts (Rom innerhalb der Mauern).';
+    if(follow&&inside){if(is3d())R3D.flyTo([x-150,y-150,x+150,y+150]);else{view.x=x;view.y=y;if(view.k<3)view.k=3;}follow=false;}req();if(window.R3D)R3D.gps();},
+    e=>{msg.textContent=e.code===1?'Standortzugriff abgelehnt. Erlaube ihn in den Browser-Einstellungen; die Seite muss über https laufen.':'Standort nicht verfügbar.';watchId=null;},
+    {enableHighAccuracy:true,maximumAge:5000,timeout:20000});};
+
+// ---------- scale ----------
+function drawScale(){const target=110/view.k;const p=Math.pow(10,Math.floor(Math.log10(target)));const n=[1,2,5,10].map(m=>m*p).filter(v=>v<=target).pop()||p;
+  document.getElementById('scalebar').style.width=(n*view.k)+'px';document.getElementById('scaletxt').textContent=n>=1000?(n/1000)+' km':n+' m';}
+
+// ---------- interaction ----------
+let raf=0;const req=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw();});};
+const pointers=new Map();let lastPinch=null,moved=0,downAt=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.offsetX,e.offsetY]);moved=0;downAt=[e.offsetX,e.offsetY];cv.classList.add('drag');});
+cv.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);const cur=[e.offsetX,e.offsetY];pointers.set(e.pointerId,cur);
+  if(pointers.size===1){view.x-=(cur[0]-prev[0])/view.k;view.y+=(cur[1]-prev[1])/view.k;moved+=Math.abs(cur[0]-prev[0])+Math.abs(cur[1]-prev[1]);req();}
+  else if(pointers.size===2){const [a,b]=[...pointers.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);const m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+    if(lastPinch){zoomAt(m[0],m[1],d/lastPinch.d);view.x-=(m[0]-lastPinch.m[0])/view.k;view.y+=(m[1]-lastPinch.m[1])/view.k;}lastPinch={d,m};moved+=10;req();}});
+const up=e=>{pointers.delete(e.pointerId);if(pointers.size<2)lastPinch=null;if(!pointers.size){cv.classList.remove('drag');if(moved<6&&downAt){const w=s2w(downAt[0],downAt[1]);if(window.R2DHOOKS.click&&window.R2DHOOKS.click(w[0],w[1]))return;pick(downAt[0],downAt[1]);}}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0018)));req();},{passive:false});
+function zoomAt(sx,sy,f){const [wx,wy]=s2w(sx,sy);view.k*=f;clampK();view.x=wx-(sx-Wc/2)/view.k;view.y=wy+(sy-Hc/2)/view.k;}
+const is3d=()=>window.R3D&&R3D.active;
+document.getElementById('zin').onclick=()=>{if(is3d())return R3D.zoom(1/1.6);zoomAt(Wc/2,Hc/2,1.6);req();};
+document.getElementById('zout').onclick=()=>{if(is3d())return R3D.zoom(1.6);zoomAt(Wc/2,Hc/2,1/1.6);req();};
+document.getElementById('zhome').onclick=()=>{if(is3d())return R3D.home();home();req();};
+window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||is3d())return;const s=80/view.k;if(e.key==='+'||e.key==='=')zoomAt(Wc/2,Hc/2,1.4);else if(e.key==='-')zoomAt(Wc/2,Hc/2,1/1.4);else if(e.key==='ArrowLeft')view.x-=s;else if(e.key==='ArrowRight')view.x+=s;else if(e.key==='ArrowUp')view.y+=s;else if(e.key==='ArrowDown')view.y-=s;else return;req();});
+
+function pick(sx,sy){worldT();const hits=[];
+  if(L.rec)for(const r of rec){if(r.p?ctx.isPointInPath(r.path,sx*dpr,sy*dpr):(ctx.lineWidth=14/view.k,ctx.isPointInStroke(r.path,sx*dpr,sy*dpr)))hits.push(r);}
+  if(L.anc)for(const a of anc){if(a.line){ctx.lineWidth=12/view.k;if(ctx.isPointInStroke(a.path,sx*dpr,sy*dpr))hits.push(a);}else if(ctx.isPointInPath(a.path,sx*dpr,sy*dpr,'evenodd'))hits.push(a);}
+  screenT();
+  // prefer named & smallest
+  hits.sort((a,b)=>((b.n||b.la)?1:0)-((a.n||a.la)?1:0)||(a.area||1e9)-(b.area||1e9));
+  let road=null;if(!hits.length&&L.roads){worldT();ctx.lineWidth=14/view.k;for(const r of roads)if(ctx.isPointInStroke(r.path,sx*dpr,sy*dpr)){road=r;break;}screenT();}
+  const h=hits[0];
+  if(h)showInfo(h);else if(road)showRoad(road);else{selected=null;document.getElementById('info').style.display='none';}
+  req();}
+const CATN={site:'archäologische Zone',ruin:'Ruine',temple:'Tempel / Heiligtum',forum:'Forum / Basilika',baths:'Thermen',theater:'Theater / Circus / Arena',tomb:'Grabbau',gate:'Stadttor',wall:'Stadtmauer',aqueduct:'Aquädukt'};
+const KINDN={circus:'Circus / Stadion',theater:'Theater / Odeon',portico:'Säulenhalle',square:'Platz',temple:'Tempel / Heiligtum',baths:'Thermen',monument:'Denkmal',public:'öffentlicher Bau',military:'Kaserne',church:'Kirche',palace:'Palast',wall_lost:'Stadtmauer'};
+function showInfo(f){selected=f;const I=id=>document.getElementById(id);
+  const isRec=!!f.k;
+  I('iT').textContent=f.n||f.it||f.la||(isRec?'':'Unbenannter antiker Rest');
+  I('iL').textContent=f.la||(f.it&&f.it!==f.n?f.it:'');
+  const pills=[];pills.push(`<span class="pill">${isRec?KINDN[f.k]||'':CATN[f.c]||'antik'}</span>`);
+  if(f.d)pills.push(`<span class="pill">${esc(f.d)}</span>`);
+  pills.push(isRec?`<span class="pill rec">Rekonstruktion · Genauigkeit: ${esc(f.acc)}</span>`:`<span class="pill">erhaltener Grundriss (OSM)</span>`);
+  I('iP').innerHTML=pills.join('');
+  let note=isRec?f.note:'';
+  if(!isRec&&f.it&&f.it!==f.n)note=(note?note+' ':'')+`Italienisch: ${f.it}.`;
+  if(!isRec&&f.w){const [lang,...t]=f.w.split(':');note+=` <a href="https://${lang}.wikipedia.org/wiki/${encodeURIComponent(t.join(':').replace(/ /g,'_'))}" target="_blank" rel="noopener">Wikipedia</a>`;}
+  I('iN').innerHTML=isRec?esc(note):note;
+  I('info').style.display='block';if(window.R2DHOOKS.info)window.R2DHOOKS.info(f);}
+function showRoad(r){selected=r;const I=id=>document.getElementById(id);I('iT').textContent=r.n;I('iL').textContent='heute: '+r.m;I('iP').innerHTML='<span class="pill">antiker Straßenzug</span>';I('iN').textContent='Die heutige Straße folgt annähernd der antiken Trasse.';I('info').style.display='block';}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('infoX').onclick=()=>{selected=null;document.getElementById('info').style.display='none';req();};
+
+// toggles
+for(const id of ['anc','rec','roads','str','strlab','latin']){const el=document.getElementById('l_'+id);el.onchange=()=>{L[id]=el.checked;req();if(window.R3D)R3D.sync();};}
+const panel=document.getElementById('panel'),col=document.getElementById('collapse');
+col.onclick=()=>{const c=panel.classList.toggle('collapsed');panel.classList.toggle('open-mobile',!c);col.textContent=c?'Ausklappen':'Einklappen';col.setAttribute('aria-expanded',String(!c));};
+if(window.matchMedia('(max-width:520px)').matches){panel.classList.add('collapsed');col.textContent='Ausklappen';col.setAttribute('aria-expanded','false');}
+
+// search
+document.getElementById('searchForm').addEventListener('submit',e=>{e.preventDefault();const q=document.getElementById('q').value.trim();const msg=document.getElementById('msg');if(!q)return;
+  let key=index.has(q)?q:[...index.keys()].find(n=>n.toLowerCase()===q.toLowerCase())||[...index.keys()].find(n=>n.toLowerCase().includes(q.toLowerCase()));
+  if(!key){msg.textContent='Nichts gefunden. Probiere z. B. „Via del Corso“ oder „Pantheon“.';return;}
+  msg.textContent=key;if(is3d())R3D.flyTo(index.get(key));else fitBox(index.get(key),80,6);
+  const f=rec.find(r=>r.n===key||r.la===key)||anc.find(a=>a.n===key||a.it===key);if(f)showInfo(f);req();});
+
+const HOOKS=window.R2DHOOKS;
+window.R2D={hooks:HOOKS,w2s,s2w,fitBox,index,is3d,esc,D,anc,ancByIdx,rec,roads,streets,view,L,req,showInfo,ll2m,dec,KX,KY,getMe:()=>me,setMe:m=>{me=m;req();if(window.R3D&&R3D.gps)R3D.gps();},getSize:()=>[Wc,Hc],fromView:(x,y,k)=>{view.x=x;view.y=y;view.k=k;clampK();req();}};
+window.addEventListener('resize',()=>{resize();req();});
+resize();home();draw();
+if(document.fonts)document.fonts.ready.then(()=>req());
+})();
+</script>
+<script src="view3d.js"></script>
+<script src="features.js"></script>
+</body>
+</html>
